@@ -6,22 +6,25 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.joda.time.LocalDate
+import ru.tectro.quote_viewer_betb2b.domain.datasources.repo.IFavoriteRepository
 import ru.tectro.quote_viewer_betb2b.domain.datasources.repo.IQuotesRepository
 import ru.tectro.quote_viewer_betb2b.domain.datasources.util.FlowResponse
 import ru.tectro.quote_viewer_betb2b.domain.datasources.util.ResponseError
-import ru.tectro.quote_viewer_betb2b.domain.entities.Quote
-import ru.tectro.quote_viewer_betb2b.domain.entities.QuotesHeader
-import ru.tectro.quote_viewer_betb2b.domain.entities.SortedField
-import ru.tectro.quote_viewer_betb2b.domain.entities.SortedOrder
+import ru.tectro.quote_viewer_betb2b.domain.datasources.util.UpdateEvents
+import ru.tectro.quote_viewer_betb2b.domain.entities.*
+import ru.tectro.quote_viewer_betb2b.domain.datasources.datastore.ISettingsManager
 import javax.inject.Inject
 
 data class QuotesState(
-    val quotesHeader: QuotesHeader? = null,
+    val date: LocalDate = LocalDate.now(),
+    val owner: String? = null,
+    val quotes: List<Quote> = emptyList(),
+
     val isQuotesLoading: Boolean = false,
     val quotesLoadingError: ResponseError? = null,
 
-    val sortedField: SortedField = SortedField.IsFavourite,
-    val sortedOrder: SortedOrder = SortedOrder.DESC
+    val sortedField: SortedField = SortedField.Title,
+    val sortedOrder: SortedOrder = SortedOrder.ASC
 )
 
 sealed class QuotesEvents {
@@ -31,14 +34,43 @@ sealed class QuotesEvents {
     data class AddToFavorites(val quote: Quote) : QuotesEvents()
     data class RemoveFromFavorites(val quote: Quote) : QuotesEvents()
 
-    data class SetSortedRules(val sortedOrder: SortedOrder, val sortedField: SortedField) :
-        QuotesEvents()
+    object NextSortedOrder : QuotesEvents()
+    data class SetSortedField(val sortedField: SortedField) : QuotesEvents()
 }
 
 @HiltViewModel
 class QuotesViewModel @Inject constructor(
-    private val repo: IQuotesRepository
+    private val quotesRepo: IQuotesRepository,
+    private val favoritesRepo: IFavoriteRepository,
+    private val settingsDataStore: ISettingsManager
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            launch {
+                favoritesRepo.favouriteUpdateFlow.collectLatest { event ->
+                    when (event) {
+                        is UpdateEvents.Update,
+                        is UpdateEvents.Add -> onAddToFavorites(event.data)
+                        is UpdateEvents.Remove -> onRemoveFromFavorites(event.data)
+                    }
+                }
+            }
+
+            launch {
+                settingsDataStore.getSortSettings().collectLatest {
+                    _state.update { state ->
+                        state.copy(
+                            sortedOrder = it.second,
+                            sortedField = it.first,
+                            quotes = state.quotes.sortQuotes(it.first, it.second)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     private val _state = MutableStateFlow(QuotesState())
     val state = _state.asStateFlow()
 
@@ -46,80 +78,70 @@ class QuotesViewModel @Inject constructor(
         when (event) {
             QuotesEvents.LoadLatestQuotes -> viewModelScope.launch { onLoadQuotes() }
             is QuotesEvents.LoadQuotesByDate -> viewModelScope.launch { onLoadQuotes(event.date) }
-            is QuotesEvents.AddToFavorites -> viewModelScope.launch { onAddToFavorites(event.quote) }
+            is QuotesEvents.AddToFavorites -> viewModelScope.launch {
+                favoritesRepo.addFavourite(
+                    event.quote.id
+                )
+            }
             is QuotesEvents.RemoveFromFavorites -> viewModelScope.launch {
-                onRemoveFromFavorites(
-                    event.quote
+                favoritesRepo.removeFavourite(
+                    event.quote.id
                 )
             }
-            is QuotesEvents.SetSortedRules -> viewModelScope.launch {
-                onSetSortedRules(
+
+            is QuotesEvents.SetSortedField -> viewModelScope.launch {
+                settingsDataStore.setSortSettings(
                     event.sortedField,
-                    event.sortedOrder
+                    state.value.sortedOrder
+                )
+            }
+
+            QuotesEvents.NextSortedOrder -> viewModelScope.launch {
+                var nextIndex = state.value.sortedOrder.ordinal + 1
+                if (nextIndex > SortedOrder.values().lastIndex)
+                    nextIndex = 0
+                settingsDataStore.setSortSettings(
+                    state.value.sortedField,
+                    SortedOrder.values()[nextIndex]
                 )
             }
         }
     }
 
-    private suspend fun onRemoveFromFavorites(quote: Quote) {
+    private fun onAddToFavorites(quoteId: String) {
         _state.update {
             it.copy(
-                quotesHeader = it.quotesHeader?.copy(
-                    quotes = it.quotesHeader.quotes.map { oldQuote ->
-                        if (oldQuote.id == quote.id)
-                            quote.copy(
-                                isFavourite = false
-                            )
-                        else
-                            oldQuote
-                    }
-                )
+                quotes = it.quotes.map { quote ->
+                    if (quote.id == quoteId)
+                        return@map quote.copy(isFavourite = true)
+                    quote
+                }
             )
         }
-        repo.removeFavourite(quote.id)
     }
 
-    private suspend fun onAddToFavorites(quote: Quote) {
+    private fun onRemoveFromFavorites(quoteId: String) {
         _state.update {
             it.copy(
-                quotesHeader = it.quotesHeader?.copy(
-                    quotes = it.quotesHeader.quotes.map { oldQuote ->
-                        if (oldQuote.id == quote.id)
-                            quote.copy(isFavourite = true)
-                        else
-                            oldQuote
-                    }
-                )
+                quotes = it.quotes.map { quote ->
+                    if (quote.id == quoteId)
+                        return@map quote.copy(isFavourite = false)
+                    quote
+                }
             )
-        }
-        repo.addFavourite(quote.id)
-    }
-
-    private fun onSetSortedRules(sortedField: SortedField, sortedOrder: SortedOrder) {
-        _state.update {
-            it.copy(
-                sortedField = sortedField,
-                sortedOrder = sortedOrder,
-                quotesHeader = it.quotesHeader
-            ).apply {
-                quotesHeader?.sortQuotes(sortedField, sortedOrder)
-            }
         }
     }
 
     private suspend fun onLoadQuotes(date: LocalDate? = null) {
-        repo.getQuotes(date).collectLatest { response ->
+        quotesRepo.getQuotes(date).collectLatest { response ->
             _state.update {
                 when (response) {
                     is FlowResponse.Error -> it.copy(quotesLoadingError = response.error)
                     is FlowResponse.Loading -> it.copy(isQuotesLoading = response.isLoading)
                     is FlowResponse.Success -> it.copy(
-                        quotesHeader = response.data.apply {
-                            sortQuotes(
-                                it.sortedField,
-                                it.sortedOrder
-                            )
-                        }
+                        date = response.data.date,
+                        quotes = response.data.quotes.sortQuotes(it.sortedField, it.sortedOrder),
+                        owner = response.data.owner,
                     )
                 }
             }

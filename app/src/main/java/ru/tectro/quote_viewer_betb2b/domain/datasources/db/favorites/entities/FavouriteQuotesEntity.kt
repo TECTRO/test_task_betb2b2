@@ -1,4 +1,4 @@
-package ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities
+package ru.tectro.quote_viewer_betb2b.domain.datasources.db.favorites.entities
 
 data class FavouriteQuotesEntity(
     val date: Long,

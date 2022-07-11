@@ -15,6 +15,7 @@ import ru.tectro.quote_viewer_betb2b.bottom_mavigation.navigation.BottomNavigati
 import ru.tectro.quote_viewer_betb2b.domain.navigation.components.BottomNavScreen
 import ru.tectro.quote_viewer_betb2b.main_screen.ui.MainScreen
 import ru.tectro.quote_viewer_betb2b.favourites_screen.navigation.FavoriteScreenRoute
+import ru.tectro.quote_viewer_betb2b.favourites_screen.ui.FavouriteScreen
 import ru.tectro.quote_viewer_betb2b.main_screen.navigation.MainScreenRoute
 
 fun NavGraphBuilder.mainNavGraph() {
@@ -45,7 +46,7 @@ fun NavGraphBuilder.mainNavGraph() {
                     composable(
                         route = MainScreenRoute.passRoute()
                     ) {
-                        Box(modifier = Modifier.padding(padding)){
+                        Box(modifier = Modifier.padding(padding)) {
                             MainScreen()
                         }
                     }
@@ -53,8 +54,8 @@ fun NavGraphBuilder.mainNavGraph() {
                     composable(
                         route = FavoriteScreenRoute.passRoute()
                     ) {
-                        Box(modifier = Modifier.padding(padding)){
-
+                        Box(modifier = Modifier.padding(padding)) {
+                            FavouriteScreen()
                         }
                     }
                 }

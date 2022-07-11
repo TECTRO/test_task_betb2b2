@@ -1,11 +1,11 @@
-package ru.tectro.quote_viewer_betb2b.domain.datasources.cache.util
+package ru.tectro.quote_viewer_betb2b.domain.datasources.db.util
 
 import org.joda.time.LocalDate
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.FavouriteEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.FavouriteQuotesEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.QuoteEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.QuotesHeaderEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.relations.HeaderWithQuotes
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.favorites.entities.FavouriteEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.favorites.entities.FavouriteQuotesEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.quotes.entities.QuoteEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.quotes.entities.QuotesHeaderEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.quotes.entities.relations.HeaderWithQuotes
 import ru.tectro.quote_viewer_betb2b.domain.entities.Quote
 import ru.tectro.quote_viewer_betb2b.domain.entities.QuotesHeader
 import java.util.*
@@ -45,12 +45,3 @@ fun FavouriteQuotesEntity.toQuote() = Quote(
     title = title,
     value = value
 )
-
-fun List<FavouriteQuotesEntity>.toQuotesHeader() =
-    groupBy { it.date to it.owner }.entries.map { entry ->
-        QuotesHeader(
-            LocalDate.fromDateFields(Date(entry.key.first)),
-            entry.key.second,
-            entry.value.map { it.toQuote() }
-        )
-    }

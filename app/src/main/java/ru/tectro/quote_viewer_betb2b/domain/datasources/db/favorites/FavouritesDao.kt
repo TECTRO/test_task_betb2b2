@@ -1,8 +1,8 @@
-package ru.tectro.quote_viewer_betb2b.domain.datasources.cache
+package ru.tectro.quote_viewer_betb2b.domain.datasources.db.favorites
 
 import androidx.room.*
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.FavouriteEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.FavouriteQuotesEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.favorites.entities.FavouriteEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.favorites.entities.FavouriteQuotesEntity
 
 @Dao
 interface FavouritesDao {
@@ -24,16 +24,15 @@ interface FavouritesDao {
 
     @Query(
         """
-            select headerDate as date,headerOwner as owner,id,isoNumCode,isoCharCode,nominal,title,value from (
-                select * from (select QuotesHeaderEntity.date as headerDate, QuotesHeaderEntity.owner as headerOwner from QuotesHeaderEntity where date == :date)
-                    left join QuoteEntity 
-                        on headerDate == QuoteEntity.date 
-                    inner join FavouriteEntity 
-                        on QuoteEntity.id == FavouriteEntity.QuoteId
-            )
+            select  QuotesHeaderEntity.date as date, owner, id, isoNumCode,isoCharCode,nominal,title,value from QuoteEntity 
+                inner join FavouriteEntity 
+                    on QuoteEntity.id == FavouriteEntity.QuoteId
+                left join QuotesHeaderEntity
+                    on QuotesHeaderEntity.date == QuoteEntity.date
+                where QuoteEntity.date == :date
         """
     )
-    suspend fun getFavoriteQuotesByDate(date:Long): List<FavouriteQuotesEntity>
+    suspend fun getFavoriteQuotesByDate(date: Long): List<FavouriteQuotesEntity>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addFavourite(favouriteEntity: FavouriteEntity)

@@ -13,7 +13,11 @@ import retrofit2.Retrofit
 import retrofit2.converter.simplexml.SimpleXmlConverterFactory
 import retrofit2.create
 import ru.tectro.quote_viewer_betb2b.domain.datasources.api.CbrApi
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.QuotesDatabase
+import ru.tectro.quote_viewer_betb2b.domain.datasources.datastore.ISettingsManager
+import ru.tectro.quote_viewer_betb2b.domain.datasources.datastore.SettingsManagerImpl
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.QuotesDatabase
+import ru.tectro.quote_viewer_betb2b.domain.datasources.repo.FavoriteRepositoryImpl
+import ru.tectro.quote_viewer_betb2b.domain.datasources.repo.IFavoriteRepository
 import ru.tectro.quote_viewer_betb2b.domain.datasources.repo.QuotesRepositoryImpl
 import ru.tectro.quote_viewer_betb2b.domain.datasources.repo.IQuotesRepository
 import javax.inject.Singleton
@@ -46,7 +50,19 @@ abstract class DomainRepoModule {
 
     @Singleton
     @Binds
-    abstract fun bindCbrRepo(
-        cbrRepositoryImpl: QuotesRepositoryImpl
+    abstract fun bindQuoteRepo(
+        quoteRepositoryImpl: QuotesRepositoryImpl
     ): IQuotesRepository
+
+    @Singleton
+    @Binds
+    abstract fun bindFavoritesRepo(
+        favoriteRepositoryImpl: FavoriteRepositoryImpl
+    ):IFavoriteRepository
+
+    @Singleton
+    @Binds
+    abstract fun bindSettingsManager(
+        settingsManagerImpl: SettingsManagerImpl
+    ): ISettingsManager
 }

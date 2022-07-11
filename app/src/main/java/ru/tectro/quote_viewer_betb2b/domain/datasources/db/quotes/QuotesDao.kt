@@ -1,9 +1,9 @@
-package ru.tectro.quote_viewer_betb2b.domain.datasources.cache
+package ru.tectro.quote_viewer_betb2b.domain.datasources.db.quotes
 
 import androidx.room.*
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.QuoteEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.QuotesHeaderEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.relations.HeaderWithQuotes
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.quotes.entities.QuoteEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.quotes.entities.QuotesHeaderEntity
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.quotes.entities.relations.HeaderWithQuotes
 
 @Dao
 interface QuotesDao {

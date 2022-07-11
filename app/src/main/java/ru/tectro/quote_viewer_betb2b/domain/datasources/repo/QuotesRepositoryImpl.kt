@@ -1,17 +1,16 @@
 package ru.tectro.quote_viewer_betb2b.domain.datasources.repo
 
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.*
 import org.joda.time.LocalDate
 import ru.tectro.quote_viewer_betb2b.domain.datasources.api.CbrApi
 import ru.tectro.quote_viewer_betb2b.domain.datasources.api.util.toQuotesHeader
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.QuotesDatabase
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.entities.FavouriteEntity
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.util.simplify
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.util.toHeaderWithQuotes
-import ru.tectro.quote_viewer_betb2b.domain.datasources.cache.util.toQuotesHeader
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.QuotesDatabase
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.util.simplify
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.util.toHeaderWithQuotes
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.favorites.util.toQuotesHeader
+import ru.tectro.quote_viewer_betb2b.domain.datasources.db.util.toQuotesHeader
 import ru.tectro.quote_viewer_betb2b.domain.datasources.util.FlowResponse
 import ru.tectro.quote_viewer_betb2b.domain.datasources.util.Response
-import ru.tectro.quote_viewer_betb2b.domain.entities.QuotesHeader
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,7 +27,11 @@ class QuotesRepositoryImpl @Inject constructor(
         emit(FlowResponse.Loading())
 
         val favorites = favouritesDao.getFavourites().simplify()
-        val cachedQuotes = quotesDao.getLatestQuotes()?.toQuotesHeader(favorites)
+        val cachedQuotes = when (date) {
+            null -> quotesDao.getLatestQuotes()
+            else -> quotesDao.getQuotesByDate(date.toDate().time)
+        }
+            ?.toQuotesHeader(favorites)
 
         cachedQuotes?.let {
             emit(FlowResponse.Success(it))
@@ -56,21 +59,4 @@ class QuotesRepositoryImpl @Inject constructor(
 
         emit(FlowResponse.Loading(false))
     }
-
-    override suspend fun getFavouriteQuotes(date: LocalDate?): QuotesHeader? {
-        return when (date) {
-            null -> favouritesDao.getLatestFavoriteQuotes()
-            else -> favouritesDao.getFavoriteQuotesByDate(date.toDate().time)
-        }
-            .toQuotesHeader()
-            .firstOrNull()
-    }
-
-    override suspend fun addFavourite(quoteId: String) = favouritesDao.addFavourite(
-        FavouriteEntity(quoteId)
-    )
-
-    override suspend fun removeFavourite(quoteId: String) = favouritesDao.removeFavourite(
-        FavouriteEntity(quoteId)
-    )
 }

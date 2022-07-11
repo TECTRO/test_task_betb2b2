@@ -1,46 +1,36 @@
-package ru.tectro.quote_viewer_betb2b.main_screen.ui
+package ru.tectro.quote_viewer_betb2b.favourites_screen.ui
 
 import android.app.DatePickerDialog
-import android.widget.DatePicker
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import org.joda.time.LocalDate
 import ru.tectro.quote_viewer_betb2b.domain.entities.SortedField
 import ru.tectro.quote_viewer_betb2b.domain.entities.SortedOrder
+import ru.tectro.quote_viewer_betb2b.favourites_screen.viewmodel.FavouritesEvents
+import ru.tectro.quote_viewer_betb2b.favourites_screen.viewmodel.FavouritesViewModel
 import ru.tectro.quote_viewer_betb2b.main_screen.ui.components.QuoteTab
 import ru.tectro.quote_viewer_betb2b.main_screen.viewmodel.QuotesEvents
-import ru.tectro.quote_viewer_betb2b.main_screen.viewmodel.QuotesViewModel
-import java.util.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
+fun FavouriteScreen(viewModel: FavouritesViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
-
-    LaunchedEffect(key1 = Unit, block = {
-        if (!state.isQuotesLoading && state.quotes.isEmpty())
-            viewModel.onEvent(QuotesEvents.LoadLatestQuotes)
-    })
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -61,15 +51,15 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
                     }
                 else
                     viewModel.onEvent(
-                        QuotesEvents.LoadQuotesByDate(
+                        FavouritesEvents.LoadFavouritesByDate(
                             selectedDate
                         )
                     )
 
             },
-            state.date.year,
-            state.date.monthOfYear - 1,
-            state.date.dayOfMonth
+            state.date?.year ?: LocalDate.now().year,
+            (state.date?.monthOfYear ?: LocalDate.now().monthOfYear) - 1,
+            state.date?.dayOfMonth ?: LocalDate.now().dayOfMonth
         )
     }
 
@@ -77,13 +67,13 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
         scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
-                title = { Text(text = "Главная") },
+                title = { Text(text = "Избранное") },
                 actions = {
                     IconButton(onClick = { datePickerDialog.show() }) {
                         Icon(imageVector = Icons.Default.DateRange, contentDescription = null)
                     }
 
-                    IconButton(onClick = { viewModel.onEvent(QuotesEvents.NextSortedOrder) }) {
+                    IconButton(onClick = { viewModel.onEvent(FavouritesEvents.NextSortedOrder) }) {
                         Icon(
                             imageVector = when (state.sortedOrder) {
                                 SortedOrder.ASC -> Icons.Rounded.KeyboardArrowDown
@@ -109,7 +99,7 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
                         SortedField.values().forEach { field ->
                             DropdownMenuItem(onClick = {
                                 viewModel.onEvent(
-                                    QuotesEvents.SetSortedField(
+                                    FavouritesEvents.SetSortedField(
                                         field
                                     )
                                 )
@@ -135,8 +125,7 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
         }
 
     ) { padding ->
-        Box(Modifier.padding(padding)) {
-
+        Column(Modifier.padding(padding)) {
             LazyColumn {
 
                 item {
@@ -154,46 +143,17 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 16.dp),
-                        text = state.date.toString("dd.MM.yyyy"),
+                        text = state.date?.toString("dd.MM.yyyy").orEmpty(),
                         style = MaterialTheme.typography.subtitle1
                     )
                 }
 
                 items(state.quotes, key = { it.id }) { quote ->
-                    Box(
-                        modifier = Modifier.animateItemPlacement(
-                            animationSpec = tween(300)
-                        )
-                    ) {
+                    Column(modifier = Modifier.animateItemPlacement(tween(200))){
                         QuoteTab(quote = quote) {
-                            viewModel.onEvent(
-                                if (quote.isFavourite)
-                                    QuotesEvents.RemoveFromFavorites(quote)
-                                else
-                                    QuotesEvents.AddToFavorites(quote)
-                            )
+                            viewModel.onEvent(FavouritesEvents.RemoveFromFavorites(quote))
                         }
-                    }
-                    Divider()
-                }
-            }
-
-            AnimatedVisibility(
-                visible = state.isQuotesLoading,
-                enter = fadeIn(tween(200)),
-                exit = fadeOut(tween(200))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colors.background)
-                        .padding(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = "Выполняется загрузка, ожидайте...")
+                        Divider()
                     }
                 }
             }
