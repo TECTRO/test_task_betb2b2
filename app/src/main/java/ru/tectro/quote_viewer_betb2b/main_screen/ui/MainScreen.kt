@@ -154,15 +154,15 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
                             text = it,
                             style = MaterialTheme.typography.h6
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 16.dp),
+                            text = state.date.toString("dd.MM.yyyy"),
+                            style = MaterialTheme.typography.subtitle1
+                        )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 16.dp),
-                        text = state.date.toString("dd.MM.yyyy"),
-                        style = MaterialTheme.typography.subtitle1
-                    )
                 }
 
                 items(state.quotes, key = { it.id }) { quote ->
