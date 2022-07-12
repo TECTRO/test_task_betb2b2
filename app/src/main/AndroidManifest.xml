@@ -16,7 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Test_task_betb2b">
         <activity
-            android:name="ru.tectro.quote_viewer_betb2b.domain.ui.RootActivity"
+            android:name=".domain.ui.RootActivity"
             android:exported="true"
             android:theme="@style/Theme.Test_task_betb2b">
             <intent-filter>

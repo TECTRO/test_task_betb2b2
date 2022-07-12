@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import org.joda.time.LocalDate
 import ru.tectro.quote_viewer_betb2b.domain.datasources.datastore.ISettingsManager
 import ru.tectro.quote_viewer_betb2b.domain.datasources.repo.IFavoriteRepository
+import ru.tectro.quote_viewer_betb2b.domain.datasources.util.FlowResponse
+import ru.tectro.quote_viewer_betb2b.domain.datasources.util.ResponseError
 import ru.tectro.quote_viewer_betb2b.domain.datasources.util.UpdateEvents
 import ru.tectro.quote_viewer_betb2b.domain.entities.Quote
 import ru.tectro.quote_viewer_betb2b.domain.entities.SortedField
@@ -23,6 +25,8 @@ data class FavouritesState(
     val date: LocalDate? = null,
     val owner: String? = null,
     val quotes: List<Quote> = emptyList(),
+    val loadingError: ResponseError? = null,
+    val isQuotesLoading: Boolean = false,
 
     val sortedField: SortedField = SortedField.IsFavourite,
     val sortedOrder: SortedOrder = SortedOrder.DESC
@@ -54,18 +58,8 @@ class FavouritesViewModel @Inject constructor(
                     when (update) {
                         is UpdateEvents.Update,
                         is UpdateEvents.Add,
-                        is UpdateEvents.Remove -> _state.update {
-                            val favorites = favoritesRepo.getFavouriteQuotes(null)
-
-                            val quotes = favorites?.quotes.orEmpty()
-                            val date = favorites?.date
-                            val owner = favorites?.owner
-                            it.copy(
-                                date = date,
-                                quotes = quotes,
-                                owner = owner
-                            )
-                        }
+                        is UpdateEvents.Remove ->
+                            onLoadFavoriteQuotes(state.value.date)
                     }
                 }
             }
@@ -85,35 +79,9 @@ class FavouritesViewModel @Inject constructor(
 
     fun onEvent(event: FavouritesEvents) {
         when (event) {
-            is FavouritesEvents.LoadFavouritesByDate -> viewModelScope.launch {
-                _state.update {
-                    val favorites = favoritesRepo.getFavouriteQuotes(event.date)
+            is FavouritesEvents.LoadFavouritesByDate -> onLoadFavoriteQuotes(event.date)
 
-                    val quotes = favorites?.quotes.orEmpty()
-                    val date = favorites?.date
-                    val owner = favorites?.owner
-                    it.copy(
-                        date = date,
-                        quotes = quotes,
-                        owner = owner
-                    )
-                }
-            }
-
-            FavouritesEvents.LoadLatestFavourites -> viewModelScope.launch {
-                _state.update {
-                    val favorites = favoritesRepo.getFavouriteQuotes(null)
-
-                    val quotes = favorites?.quotes.orEmpty()
-                    val date = favorites?.date
-                    val owner = favorites?.owner
-                    it.copy(
-                        date = date,
-                        quotes = quotes,
-                        owner = owner
-                    )
-                }
-            }
+            FavouritesEvents.LoadLatestFavourites -> onLoadFavoriteQuotes()
 
             is FavouritesEvents.RemoveFromFavorites -> viewModelScope.launch {
                 favoritesRepo.removeFavourite(event.quote.id)
@@ -134,6 +102,34 @@ class FavouritesViewModel @Inject constructor(
                     state.value.sortedField,
                     SortedOrder.values()[nextIndex]
                 )
+            }
+        }
+    }
+
+    private fun onLoadFavoriteQuotes(date: LocalDate? = null) = viewModelScope.launch {
+        favoritesRepo.getFavouriteQuotes(date).collectLatest { response ->
+            when (response) {
+                is FlowResponse.Error -> _state.update {
+                    it.copy(
+                        loadingError = response.error
+                    )
+                }
+                is FlowResponse.Loading -> _state.update {
+                    it.copy(
+                        isQuotesLoading = response.isLoading
+                    )
+                }
+                is FlowResponse.Success -> {
+                    _state.update {
+                        val favorites = response.data
+
+                        it.copy(
+                            date = favorites.date,
+                            quotes = favorites.quotes,
+                            owner = favorites.owner
+                        )
+                    }
+                }
             }
         }
     }

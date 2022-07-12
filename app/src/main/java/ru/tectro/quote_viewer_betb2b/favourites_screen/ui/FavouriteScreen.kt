@@ -1,8 +1,12 @@
 package ru.tectro.quote_viewer_betb2b.favourites_screen.ui
 
 import android.app.DatePickerDialog
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -125,7 +129,7 @@ fun FavouriteScreen(viewModel: FavouritesViewModel = hiltViewModel()) {
         }
 
     ) { padding ->
-        Column(Modifier.padding(padding)) {
+        Box(Modifier.padding(padding)) {
             LazyColumn {
 
                 item {
@@ -154,6 +158,26 @@ fun FavouriteScreen(viewModel: FavouritesViewModel = hiltViewModel()) {
                             viewModel.onEvent(FavouritesEvents.RemoveFromFavorites(quote))
                         }
                         Divider()
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = state.isQuotesLoading,
+                enter = fadeIn(tween(200)),
+                exit = fadeOut(tween(200))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colors.background)
+                        .padding(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(text = "Выполняется загрузка, ожидайте...")
                     }
                 }
             }
