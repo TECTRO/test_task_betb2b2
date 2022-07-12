@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
@@ -44,6 +45,9 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
     val scaffoldState = rememberScaffoldState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var latestSelectedDate by remember {
+        mutableStateOf<LocalDate?>(null)
+    }
     val datePickerDialog = remember {
         DatePickerDialog(
             context,
@@ -59,12 +63,14 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
                             "На ${selectedDate.toString("dd.MM.yyyy")} котировки еще не выпущены"
                         )
                     }
-                else
+                else {
                     viewModel.onEvent(
                         QuotesEvents.LoadQuotesByDate(
                             selectedDate
                         )
                     )
+                    latestSelectedDate = selectedDate
+                }
 
             },
             state.date.year,
@@ -179,7 +185,7 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
             }
 
             AnimatedVisibility(
-                visible = state.isQuotesLoading,
+                visible = state.isQuotesLoading || state.quotesLoadingError != null,
                 enter = fadeIn(tween(200)),
                 exit = fadeOut(tween(200))
             ) {
@@ -190,10 +196,76 @@ fun MainScreen(viewModel: QuotesViewModel = hiltViewModel()) {
                         .padding(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = "Выполняется загрузка, ожидайте...")
+                    AnimatedVisibility(
+                        visible = state.isQuotesLoading,
+                        enter = fadeIn(tween(200)),
+                        exit = fadeOut(tween(200))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Выполняется загрузка, ожидайте...",
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = state.quotesLoadingError != null,
+                        enter = fadeIn(tween(200)),
+                        exit = fadeOut(tween(200))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colors.background)
+                                .padding(40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Возникла непредвиденная ошибка.",
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                if (latestSelectedDate != null) {
+                                    Button(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            latestSelectedDate?.let {
+                                                viewModel.onEvent(
+                                                    QuotesEvents.LoadQuotesByDate(
+                                                        it
+                                                    )
+                                                )
+                                                viewModel.onEvent(QuotesEvents.SuppressError)
+                                            }
+                                        }
+                                    ) {
+                                        Text(text = "Перезагрузить", textAlign = TextAlign.Center)
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                                OutlinedButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        viewModel.onEvent(QuotesEvents.LoadLatestQuotes)
+                                        viewModel.onEvent(QuotesEvents.SuppressError)
+                                    }) {
+                                    Text(
+                                        text = "Загрузить последнюю активную сводку",
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

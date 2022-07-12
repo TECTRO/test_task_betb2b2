@@ -36,6 +36,7 @@ sealed class FavouritesEvents {
     object LoadLatestFavourites : FavouritesEvents()
     data class LoadFavouritesByDate(val date: LocalDate) : FavouritesEvents()
     data class RemoveFromFavorites(val quote: Quote) : FavouritesEvents()
+    object SuppressError : FavouritesEvents()
 
     object NextSortedOrder : FavouritesEvents()
     data class SetSortedField(val sortedField: SortedField) : FavouritesEvents()
@@ -58,8 +59,10 @@ class FavouritesViewModel @Inject constructor(
                     when (update) {
                         is UpdateEvents.Update,
                         is UpdateEvents.Add,
-                        is UpdateEvents.Remove ->
+                        is UpdateEvents.Remove ->{
+                            onEvent(FavouritesEvents.SuppressError)
                             onLoadFavoriteQuotes(state.value.date)
+                        }
                     }
                 }
             }
@@ -101,6 +104,11 @@ class FavouritesViewModel @Inject constructor(
                 settingsManager.setSortSettings(
                     state.value.sortedField,
                     SortedOrder.values()[nextIndex]
+                )
+            }
+            FavouritesEvents.SuppressError -> _state.update {
+                it.copy(
+                    loadingError = null
                 )
             }
         }

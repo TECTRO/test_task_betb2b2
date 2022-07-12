@@ -30,7 +30,7 @@ data class QuotesState(
 sealed class QuotesEvents {
     object LoadLatestQuotes : QuotesEvents()
     data class LoadQuotesByDate(val date: LocalDate) : QuotesEvents()
-
+    object SuppressError : QuotesEvents()
     data class AddToFavorites(val quote: Quote) : QuotesEvents()
     data class RemoveFromFavorites(val quote: Quote) : QuotesEvents()
 
@@ -103,6 +103,11 @@ class QuotesViewModel @Inject constructor(
                 settingsDataStore.setSortSettings(
                     state.value.sortedField,
                     SortedOrder.values()[nextIndex]
+                )
+            }
+            QuotesEvents.SuppressError -> _state.update {
+                it.copy(
+                    quotesLoadingError = null
                 )
             }
         }
